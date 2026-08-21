@@ -38,22 +38,26 @@
 src/app/layout.tsx              ฟอนต์ Noto Sans Thai + metadata
 src/app/page.tsx                Server Component — ตรวจ session แล้ว redirect ไป /login ถ้ายังไม่ล็อกอิน
 src/app/login/page.tsx          หน้าเข้าสู่ระบบ
+src/app/register/page.tsx       หน้าสมัครสมาชิกด้วยโค้ดเชิญ
 src/app/globals.css             design tokens ของ 9Expert CI (ห้ามแก้ค่าสีโดยไม่ถาม)
 src/app/api/login/route.ts      ตรวจรหัสผ่านด้วย bcrypt แล้วออกคุกกี้ session
 src/app/api/logout/route.ts     ลบคุกกี้ session
+src/app/api/register/route.ts   สมัครสมาชิกด้วยโค้ดเชิญ แล้วออกคุกกี้ให้เลย
 src/app/api/expenses/route.ts   GET รายการทั้งหมดของผู้ใช้ / POST เพิ่มรายการ
 src/app/api/expenses/[id]/route.ts  PATCH แก้ไข / DELETE ลบ
 src/app/api/expenses/shared.ts  type Row, แปลงข้อมูล, ตรวจ payload ฝั่ง server
 src/components/ExpenseApp.tsx   ตัวแอปฝั่ง client ถือ state ทั้งหมด
+src/components/RegisterForm.tsx ฟอร์มสมัครสมาชิก
 src/components/                 ExpenseForm, ExpenseTable, Filters, CategorySummary
 src/lib/supabase-admin.ts       จุดเชื่อมต่อ Supabase จุดเดียว — server only
 src/lib/session.ts              คุกกี้ session เซ็นด้วย HMAC — server only
 src/lib/auth.ts                 currentUser() อ่านผู้ใช้จากคุกกี้ — server only
+src/lib/invite.ts               ตรวจโค้ดเชิญและกติกาชื่อผู้ใช้/รหัสผ่าน — server only
 src/lib/expenses.ts             ชั้นเข้าถึงข้อมูลฝั่ง client — เรียก /api/expenses
 src/lib/types.ts                type Expense
 src/lib/categories.ts           CATEGORIES, CATEGORY_COLOR, formatBaht, today
 src/lib/validate.ts             ตรวจฟอร์มฝั่ง client คืนข้อความเตือนภาษาไทย
-scripts/create-user.mjs         สร้างบัญชีผู้ใช้ (ไม่มีหน้าสมัครสมาชิก)
+scripts/create-user.mjs         สร้างบัญชีผู้ใช้จากเครื่องเจ้าของ (ทางเลือกนอกจากหน้า /register)
 supabase/myexpense-seed.sql     สร้างตาราง expenses + ข้อมูลตัวอย่าง 8 แถว
 supabase/migration-auth.sql     เพิ่ม app_users, expenses.user_id และเปิด RLS
 ```
@@ -109,6 +113,7 @@ supabase/migration-auth.sql     เพิ่ม app_users, expenses.user_id แ�
 NEXT_PUBLIC_SUPABASE_URL       URL ของโปรเจกต์ ไม่ใช่ความลับ
 SUPABASE_SERVICE_ROLE_KEY      กุญแจผีของฐานข้อมูล ข้าม RLS ได้ทุกอย่าง
 SESSION_SECRET                 สุ่มเอง 32 bytes ใช้เซ็นคุกกี้ session
+REGISTER_INVITE_CODE           โค้ดเชิญสำหรับสมัครสมาชิก ปล่อยว่าง = ปิดรับสมัคร
 ```
 
 **ตอนพัฒนา (local):** อยู่ใน `.env.local` (ไม่เข้า git) — ดูคำอธิบายแต่ละตัวใน `.env.local.example`
@@ -130,15 +135,23 @@ npm run dev      # dev server ที่ http://localhost:3000
 npm run build    # ตรวจ TypeScript + build production
 npm run lint
 
-# สร้างบัญชีผู้ใช้ (ไม่มีหน้าสมัครสมาชิก)
+# สร้างบัญชีผู้ใช้จากเครื่องเจ้าของ (ปกติผู้ใช้สมัครเองที่หน้า /register)
 node scripts/create-user.mjs <username> <password> "<ชื่อที่แสดง>"
+
+# สุ่มโค้ดเชิญใหม่
+node -e "console.log(require('crypto').randomBytes(9).toString('base64url'))"
 ```
 
 รัน `npm run build` ก่อนเสมอเมื่อแก้โค้ดเสร็จ — เป็นด่านตรวจ type เดียวที่มีในโปรเจกต์นี้ (ไม่มีชุดทดสอบ)
 
 ## ข้อจำกัดที่รู้อยู่ (อย่า "แก้" โดยไม่ถาม)
 
-- **ไม่มีหน้าสมัครสมาชิก** โดยเจตนา — เจ้าของโปรเจกต์สร้างบัญชีให้ด้วย `scripts/create-user.mjs`
+- **สมัครสมาชิกต้องมีโค้ดเชิญ** โดยเจตนา — ไม่เปิดให้ใครก็สมัครได้
+  ถ้า `REGISTER_INVITE_CODE` ว่าง หน้า `/register` จะขึ้นว่าปิดรับสมัคร ซึ่งเป็นค่าเริ่มต้นที่ปลอดภัย
+- **ชื่อผู้ใช้เก็บเป็นตัวเล็กทั้งหมด** ทั้ง `/api/register` และ `/api/login` แปลงด้วย `.toLowerCase()`
+  ก่อนแตะฐานข้อมูล ถ้าเพิ่มทางเข้าใหม่ต้องแปลงเหมือนกัน ไม่งั้นล็อกอินไม่ผ่าน
+- **โค้ดเชิญไม่มีวันหมดอายุและใช้ซ้ำได้ไม่จำกัด** ถ้าโค้ดรั่ว ให้เปลี่ยนค่า env var
 - **session ไม่มีการ refresh** อายุ 7 วันแล้วต้องล็อกอินใหม่
-- **ไม่มีหน้าเปลี่ยนรหัสผ่าน** และไม่มีระบบรีเซ็ตรหัสผ่าน
+- **ไม่มีหน้าเปลี่ยนรหัสผ่าน** และไม่มีระบบรีเซ็ตรหัสผ่าน — ถ้าผู้ใช้ลืมรหัสผ่าน
+  ต้องลบบัญชีเดิมแล้วให้สมัครใหม่ (รายจ่ายจะหายไปด้วยเพราะ `on delete cascade`)
 - `README.md` เป็นเอกสาร checkpoint ของคอร์ส เนื้อหาบางส่วนล้าสมัย — ยึด AGENTS.md เป็นหลัก

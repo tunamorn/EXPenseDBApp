@@ -12,7 +12,8 @@ export async function POST(request: Request) {
   let password = "";
   try {
     const body = await request.json();
-    username = String(body.username ?? "").trim();
+    // ชื่อผู้ใช้เก็บเป็นตัวเล็กทั้งหมด (ดู /api/register) จึงต้องแปลงก่อนค้นให้ตรงกัน
+    username = String(body.username ?? "").trim().toLowerCase();
     password = String(body.password ?? "");
   } catch {
     return Response.json({ error: "ข้อมูลที่ส่งมาไม่ถูกต้อง" }, { status: 400 });

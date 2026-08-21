@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 // หน้าเข้าสู่ระบบ — ส่งชื่อผู้ใช้กับรหัสผ่านไปตรวจที่ /api/login ฝั่ง server
@@ -91,8 +92,11 @@ export default function LoginPage() {
           {submitting ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
         </button>
 
-        <p className="mt-4 text-sm text-steel">
-          ไม่มีหน้าสมัครสมาชิก — บัญชีผู้ใช้สร้างโดยเจ้าของโปรเจกต์เท่านั้น
+        <p className="mt-4 text-sm text-ink">
+          ยังไม่มีบัญชี?{" "}
+          <Link href="/register" className="font-medium text-brand hover:underline">
+            สมัครสมาชิกด้วยโค้ดเชิญ
+          </Link>
         </p>
       </form>
     </main>
