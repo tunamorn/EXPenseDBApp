@@ -72,7 +72,12 @@ NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 ```
 
-อยู่ใน `.env.local` (ไม่เข้า git) — ดูชื่อตัวแปรได้จาก `.env.local.example` ที่ commit ขึ้น repo ได้
+**ตอนพัฒนา (local):** อยู่ใน `.env.local` (ไม่เข้า git) — ดูชื่อตัวแปรได้จาก `.env.local.example` ที่ commit ขึ้น repo ได้
+
+**ตอน production:** ตั้งเป็น Environment Variables ในหน้า Settings ของโปรเจกต์ Vercel
+**ห้ามแนบไฟล์ `.env.production` ไปกับ deploy** — Vercel เตือนใน build log ว่าควรใช้ env handling ของตัวเอง
+และการฝังค่าไว้ในไฟล์ที่ deploy ทำให้แก้ค่าไม่ได้โดยไม่ deploy ใหม่
+
 ค่าเหล่านี้ถูกฝังลง bundle ฝั่งเบราว์เซอร์ตอน build จึงเป็นข้อมูลสาธารณะ
 
 ถ้าตัวแปรใดยังไม่ได้ตั้งค่า `src/lib/supabase.ts` จะ export `supabase` เป็น `null`
